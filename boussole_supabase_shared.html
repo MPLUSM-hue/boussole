@@ -1,0 +1,2207 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boussole By MPLUSM</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #f4f2ee;
+    --surface: #ffffff;
+    --surface2: #f9f7f4;
+    --border: rgba(0,0,0,0.08);
+    --border-strong: rgba(0,0,0,0.14);
+    --text: #1a1a18;
+    --text-2: #6b6b66;
+    --text-3: #a0a09a;
+    --accent: #2a5c45;
+    --accent-light: #e8f2ee;
+    --accent-mid: #b8d9cb;
+    --energie: #d97706;
+    --biodiversite: #4d7c0f;
+    --eau: #1d6fa4;
+    --ressources: #b94a28;
+    --sante: #6d51b8;
+    --usage: #0f7a6b;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .header-logo svg { width: 28px; height: 28px; }
+  .header-title { font-size: 16px; font-weight: 600; color: var(--text); letter-spacing: -0.3px; }
+  .header-sub { font-size: 12px; color: var(--text-3); font-family: 'DM Mono', monospace; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .project-input {
+    padding: 6px 12px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface2);
+    color: var(--text);
+    width: 200px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .project-input:focus { border-color: var(--accent); }
+  .btn {
+    padding: 7px 16px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all .15s;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text-2);
+  }
+  .btn:hover { background: var(--surface2); }
+  .btn-accent {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  .btn-accent:hover { background: #234d3a; border-color: #234d3a; }
+
+  /* LAYOUT */
+  .layout { display: flex; min-height: calc(100vh - 60px); }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 1.5rem 0;
+    position: sticky;
+    top: 60px;
+    height: calc(100vh - 60px);
+    overflow-y: auto;
+  }
+  .nav-section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    padding: 0 1.25rem;
+    margin-bottom: 6px;
+    margin-top: 1rem;
+  }
+  .nav-section-label:first-child { margin-top: 0; }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 1.25rem;
+    cursor: pointer;
+    transition: all .12s;
+    border-left: 2px solid transparent;
+    font-size: 13px;
+    color: var(--text-2);
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-light); font-weight: 500; }
+  .nav-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .nav-score { margin-left: auto; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); }
+  .nav-item.active .nav-score { color: var(--accent); }
+
+  /* MAIN */
+  .main { flex: 1; padding: 2rem; overflow-y: auto; max-width: 860px; }
+
+  /* PAGE TITLES */
+  .page-header { margin-bottom: 1.75rem; }
+  .page-title { font-size: 22px; font-weight: 600; letter-spacing: -0.4px; color: var(--text); }
+  .page-subtitle { font-size: 13px; color: var(--text-2); margin-top: 4px; }
+
+  /* SECTION */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* DASHBOARD CARDS */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    box-shadow: var(--shadow);
+  }
+  .summary-card.global {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+  .summary-card .s-label { font-size: 11px; color: var(--text-3); font-weight: 500; margin-bottom: 6px; }
+  .summary-card.global .s-label { color: rgba(255,255,255,0.7); }
+  .summary-card .s-value { font-size: 26px; font-weight: 600; letter-spacing: -1px; color: var(--text); font-family: 'DM Mono', monospace; }
+  .summary-card.global .s-value { color: white; }
+  .summary-card .s-max { font-size: 12px; color: var(--text-3); }
+  .summary-card.global .s-max { color: rgba(255,255,255,0.6); }
+  .summary-card .s-dot { width: 6px; height: 6px; border-radius: 50%; margin-bottom: 8px; }
+
+  /* RADAR */
+  .radar-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* BARS */
+  .bars-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    box-shadow: var(--shadow);
+    margin-bottom: 1.5rem;
+  }
+  .bars-title { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); margin-bottom: 1rem; }
+  .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .bar-label { font-size: 13px; color: var(--text-2); min-width: 150px; }
+  .bar-track { flex: 1; height: 5px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width .5s cubic-bezier(.4,0,.2,1); }
+  .bar-val { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--text-3); min-width: 40px; text-align: right; }
+
+  /* CRITERIA CARDS */
+  .criterion-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    box-shadow: var(--shadow);
+    margin-bottom: 1rem;
+  }
+  .criterion-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .criterion-title { font-size: 14px; font-weight: 500; color: var(--text); }
+  .criterion-coef { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); background: var(--surface2); padding: 2px 8px; border-radius: 20px; border: 1px solid var(--border); }
+
+  .options { display: flex; flex-direction: column; gap: 4px; }
+  .option {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all .12s;
+    background: var(--surface2);
+  }
+  .option:hover { border-color: var(--border-strong); background: white; }
+  .option.selected { background: var(--accent-light); border-color: var(--accent-mid); }
+  .option-score {
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+    min-width: 18px;
+    color: var(--text-3);
+    margin-top: 1px;
+  }
+  .option.selected .option-score { color: var(--accent); }
+  .option-label { font-size: 13px; color: var(--text-2); line-height: 1.4; }
+  .option.selected .option-label { color: var(--text); }
+
+  .score-pill {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-3);
+  }
+  .score-pill.filled { background: var(--accent-light); border-color: var(--accent-mid); color: var(--accent); }
+
+  /* BONUS */
+  .bonus-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .bonus-title { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); margin-bottom: 10px; }
+  .bonus-option { display: flex; align-items: center; gap: 10px; padding: 5px 0; cursor: pointer; }
+  .bonus-option input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+  .bonus-option label { font-size: 13px; color: var(--text-2); cursor: pointer; }
+
+  /* INFO PANEL */
+  .info-panel {
+    background: var(--accent-light);
+    border: 1px solid var(--accent-mid);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    font-size: 13px;
+    color: var(--accent);
+  }
+
+  /* REG BUTTON */
+  .reg-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    color: var(--text-3);
+    background: var(--surface);
+    border: 1px dashed var(--border-strong);
+    border-radius: 20px;
+    padding: 5px 14px;
+    cursor: pointer;
+    margin-bottom: 1rem;
+    transition: all .15s;
+  }
+  .reg-btn:hover { color: var(--text-2); border-color: var(--text-3); background: var(--surface2); }
+  .reg-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+  /* REG PANEL */
+  .reg-panel {
+    display: none;
+    background: #fffbf0;
+    border: 1px solid #e8d88a;
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    font-size: 13px;
+    color: #5a4a10;
+    animation: fadeIn .15s ease;
+  }
+  .reg-panel.open { display: block; }
+  .reg-panel-title { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #a08020; margin-bottom: 8px; }
+  .reg-panel ul { padding-left: 1rem; }
+  .reg-panel li { margin-bottom: 5px; line-height: 1.5; }
+  .reg-panel table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
+  .reg-panel th { background: #f5e98a; color: #5a4a10; font-weight: 600; padding: 5px 8px; border: 1px solid #d4c060; text-align: left; }
+  .reg-panel td { padding: 5px 8px; border: 1px solid #e8d88a; color: #5a4a10; }
+  .reg-panel tr:nth-child(even) td { background: #fffdf0; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* TOOLTIP */
+  .criterion-info {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    margin-left: 7px;
+    cursor: default;
+  }
+  .criterion-info svg {
+    width: 15px;
+    height: 15px;
+    color: var(--text-3);
+    transition: color .15s;
+    flex-shrink: 0;
+  }
+  .criterion-info:hover svg { color: var(--accent); }
+  .criterion-info .tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #5f7895;
+    color: #eeebe8f5;
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 8px 12px;
+    border-radius: 8px;
+    white-space: nowrap;
+    max-width: 280px;
+    white-space: normal;
+    width: max-content;
+    max-width: 260px;
+    box-shadow: 0 4px 16px rgba(134, 134, 132, 0.895);
+    z-index: 50;
+    pointer-events: none;
+  }
+  .criterion-info .tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #5f7895;
+  }
+  .criterion-info:hover .tooltip { display: block; }
+
+  /* CBS INITIAL NOTE */
+  .cbs-note {
+    background: #f0f7ff;
+    border: 1px solid #b8d4f0;
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    margin-bottom: 1rem;
+    font-size: 13px;
+    color: #1a4a7a;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .cbs-note-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* GRID LINK */
+  .grid-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-3);
+    border: 1px dashed var(--border-strong);
+    border-radius: 20px;
+    padding: 2px 10px;
+    cursor: default;
+    font-style: italic;
+  }
+
+  /* PDF BUTTON */
+  .action-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1.5rem; }
+
+  /* PDF MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 2rem;
+    max-width: 640px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  }
+  .modal-title { font-size: 18px; font-weight: 600; margin-bottom: 1.25rem; }
+  .modal-close { float: right; cursor: pointer; font-size: 20px; color: var(--text-3); background: none; border: none; line-height: 1; }
+  .modal-close:hover { color: var(--text); }
+
+  /* PDF REPORT */
+  #pdf-content {
+    font-family: 'DM Sans', sans-serif;
+    padding: 2.5rem;
+    max-width: 700px;
+    margin: 0 auto;
+    color: #1a1a18;
+  }
+  .pdf-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; padding-bottom: 1.5rem; border-bottom: 2px solid #2a5c45; }
+  .pdf-logo-title { font-size: 22px; font-weight: 700; color: #2a5c45; }
+  .pdf-meta { font-size: 12px; color: #888; text-align: right; }
+  .pdf-project { font-size: 16px; font-weight: 600; color: #1a1a18; margin-bottom: 0.25rem; }
+  .pdf-section-title { font-size: 14px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #2a5c45; margin: 1.5rem 0 0.75rem; border-bottom: 1px solid #e8f2ee; padding-bottom: 4px; }
+  .pdf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1rem; }
+  .pdf-card { border: 1px solid #e0e0da; border-radius: 8px; padding: 12px; }
+  .pdf-card-label { font-size: 11px; color: #888; margin-bottom: 4px; }
+  .pdf-card-value { font-size: 20px; font-weight: 700; color: #1a1a18; }
+  .pdf-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .pdf-bar-label { font-size: 12px; color: #555; min-width: 160px; }
+  .pdf-bar-track { flex: 1; height: 6px; background: #f0eeea; border-radius: 3px; overflow: hidden; }
+  .pdf-bar-fill { height: 100%; border-radius: 3px; }
+  .pdf-bar-val { font-size: 12px; font-weight: 600; color: #333; min-width: 36px; text-align: right; }
+  .pdf-footer { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e0e0da; font-size: 11px; color: #aaa; text-align: center; }
+
+  @media print {
+    @page { margin: 0; size: A4; }
+    body * { visibility: hidden !important; }
+    #pdf-printzone, #pdf-printzone * { visibility: visible !important; }
+    #pdf-printzone {
+      position: absolute !important;
+      left: 0 !important; top: 0 !important;
+      width: 100% !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      background: white !important;
+      z-index: 99999 !important;
+    }
+    .pz-cover {
+      page-break-after: always !important;
+      break-after: page !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      height: 297mm !important;
+      max-height: 297mm !important;
+      overflow: hidden !important;
+    }
+    .pz-page {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      page-break-before: always !important;
+      break-before: page !important;
+    }
+    .pdf-modal-frame { display: none !important; }
+  }
+
+  /* SAVE/LOAD UI */
+  .save-bar {
+    display: flex; align-items: center; gap: 8px;
+    background: #f0f7f3; border: 1px solid #b8d9cb;
+    border-radius: var(--radius-sm); padding: 6px 12px;
+    font-size: 12px; color: var(--accent);
+  }
+  .save-bar strong { font-weight: 600; }
+  .save-list {
+    position: absolute; top: 56px; right: 12px;
+    background: white; border: 1px solid var(--border-strong);
+    border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    min-width: 260px; z-index: 300; overflow: hidden;
+  }
+  .save-list-title { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); padding: 10px 14px 6px; }
+  .save-list-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px; cursor: pointer; transition: background .1s;
+    border-top: 1px solid var(--border); font-size: 13px;
+  }
+  .save-list-item:hover { background: var(--surface2); }
+  .save-list-item .sli-name { font-weight: 500; color: var(--text); }
+  .save-list-item .sli-date { font-size: 11px; color: var(--text-3); font-family: 'DM Mono', monospace; }
+  .save-list-del { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 16px; line-height: 1; padding: 2px 4px; border-radius: 4px; }
+  .save-list-del:hover { background: #fee2e2; color: #c0392b; }
+  .save-list-empty { padding: 14px; font-size: 13px; color: var(--text-3); text-align: center; }
+
+  /* PDF PRINT ZONE */
+  #pdf-printzone {
+    display: none;
+    font-family: 'DM Sans', sans-serif;
+    color: #1a1a18;
+    background: white;
+  }
+
+  /* ── PAGE 1 : COVER ── */
+  .pz-cover {
+    width: 210mm;
+    height: 297mm;
+    margin: 0 auto;
+    box-sizing: border-box;
+    background: #0e2d1e;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+    break-after: page;
+  }
+  .pz-cover-accent {
+    position: absolute; top: 0; right: 0;
+    width: 55%; height: 100%;
+    background: linear-gradient(135deg, #1a4a30 0%, #2a5c45 60%, #3a7a5e 100%);
+    clip-path: polygon(18% 0, 100% 0, 100% 100%, 0% 100%);
+  }
+  .pz-cover-dots {
+    position: absolute; bottom: 0; left: 0;
+    width: 45%; height: 50%;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+  .pz-cover-content {
+    position: relative; z-index: 2;
+    padding: 18mm 18mm 0 18mm;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .pz-cover-logo-row {
+    display: flex; align-items: center; gap: 10px; margin-bottom: auto;
+  }
+  .pz-cover-logo-icon {
+    width: 36px; height: 36px;
+  }
+  .pz-cover-brand {
+    font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.85); letter-spacing: .04em;
+  }
+  .pz-cover-tag {
+    display: inline-block;
+    font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    color: #3ab87a; border: 1px solid #3ab87a; border-radius: 3px;
+    padding: 3px 10px; margin-bottom: 14mm;
+  }
+  .pz-cover-main-title {
+    font-size: 36px; font-weight: 700; color: white; letter-spacing: -1px;
+    line-height: 1.15; margin-bottom: 6px;
+  }
+  .pz-cover-sub {
+    font-size: 14px; color: rgba(255,255,255,0.55); font-weight: 400;
+    margin-bottom: 10mm;
+  }
+  .pz-cover-project-box {
+    display: inline-block;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin-bottom: 14mm;
+  }
+  .pz-cover-project-label { font-size: 9px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 4px; }
+  .pz-cover-project-name { font-size: 18px; font-weight: 600; color: white; }
+  .pz-cover-score-row {
+    display: flex; gap: 16px; margin-bottom: 14mm;
+  }
+  .pz-cover-score-block {
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px; padding: 12px 20px; text-align: center;
+  }
+  .pz-cover-score-block.highlight {
+    background: #2a5c45; border-color: #3ab87a;
+  }
+  .pz-cover-score-val { font-size: 28px; font-weight: 700; color: white; font-family: 'DM Mono', monospace; line-height: 1; }
+  .pz-cover-score-val span { font-size: 13px; color: rgba(255,255,255,0.5); }
+  .pz-cover-score-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,0.45); margin-top: 5px; }
+  .pz-cover-footer {
+    padding: 0 18mm 10mm;
+    position: relative; z-index: 2;
+    display: flex; justify-content: space-between; align-items: flex-end;
+  }
+  .pz-cover-footer-date { font-size: 10px; color: rgba(255,255,255,0.3); }
+  .pz-cover-footer-brand { font-size: 10px; color: rgba(255,255,255,0.3); text-align: right; }
+
+  /* ── PAGE 2 : REPORT ── */
+  .pz-page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    padding: 14mm 16mm 14mm;
+    box-sizing: border-box;
+    background: white;
+    page-break-before: always;
+    break-before: page;
+  }
+  .pz-page-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 10px; border-bottom: 2px solid #2a5c45; margin-bottom: 14px;
+  }
+  .pz-page-header-left { display: flex; flex-direction: column; gap: 1px; }
+  .pz-page-logo { font-size: 13px; font-weight: 700; color: #2a5c45; letter-spacing: -0.2px; }
+  .pz-page-project { font-size: 11px; color: #888; }
+  .pz-page-global {
+    font-size: 22px; font-weight: 700; color: #2a5c45;
+    font-family: 'DM Mono', monospace;
+  }
+  .pz-page-global span { font-size: 11px; color: #aaa; font-weight: 400; }
+  .pz-page-global-lbl { font-size: 9px; color: #aaa; text-align: right; letter-spacing: .05em; text-transform: uppercase; }
+
+  .pz-section-title {
+    font-size: 8px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    color: #2a5c45; border-bottom: 1px solid #c8e0d8; padding-bottom: 4px;
+    margin: 14px 0 10px;
+  }
+
+  /* Radar + scores two-col */
+  .pz-top-row {
+    display: grid; grid-template-columns: 210px 1fr; gap: 14px; margin-bottom: 4px;
+  }
+  .pz-radar-wrap {
+    background: #f8faf9; border: 1px solid #ddeedd; border-radius: 8px;
+    padding: 8px; display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Theme score cards */
+  .pz-theme-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 6px; }
+  .pz-theme-card {
+    border-radius: 6px; padding: 8px 10px;
+    border-left: 3px solid currentColor;
+    background: #f9f9f7;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .pz-theme-label { font-size: 10px; color: #555; font-weight: 500; }
+  .pz-theme-score { font-size: 18px; font-weight: 700; font-family: 'DM Mono', monospace; }
+  .pz-theme-max { font-size: 10px; color: #aaa; }
+
+  /* Bar chart */
+  .pz-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .pz-bar-label { font-size: 10px; color: #555; width: 120px; flex-shrink: 0; }
+  .pz-bar-outer { flex: 1; height: 7px; background: #eeecea; border-radius: 4px; overflow: hidden; }
+  .pz-bar-inner { height: 100%; border-radius: 4px; }
+  .pz-bar-val { font-size: 10px; font-weight: 600; color: #333; width: 30px; text-align: right; flex-shrink: 0; }
+
+  /* Legend */
+  .pz-legend {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;
+  }
+  .pz-legend-item {
+    display: flex; align-items: center; gap: 4px;
+    background: #f5f5f2; border-radius: 4px; padding: 3px 8px;
+    font-size: 9px; color: #555;
+  }
+  .pz-legend-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+  /* Criteria detail table */
+  .pz-detail-table { width: 100%; border-collapse: collapse; font-size: 9.5px; margin-top: 4px; }
+  .pz-detail-table th {
+    background: #2a5c45; color: white; font-weight: 600;
+    padding: 5px 8px; text-align: left;
+  }
+  .pz-detail-table td { padding: 5px 8px; border-bottom: 1px solid #eef0ee; color: #333; vertical-align: top; line-height: 1.4; }
+  .pz-detail-table tr:nth-child(even) td { background: #fafcfb; }
+  .pz-score-badge {
+    display: inline-block; padding: 1px 7px; border-radius: 20px;
+    font-weight: 700; font-size: 10px; font-family: 'DM Mono', monospace;
+    color: white;
+  }
+
+  /* Score level labels */
+  .pz-level-row { display: flex; gap: 6px; margin-bottom: 10px; }
+  .pz-level-item { flex: 1; text-align: center; border-radius: 5px; padding: 5px 4px; }
+  .pz-level-num { font-size: 14px; font-weight: 700; font-family: 'DM Mono', monospace; }
+  .pz-level-lbl { font-size: 8px; color: #777; margin-top: 2px; line-height: 1.3; }
+
+  .pz-footer {
+    margin-top: 14px; padding-top: 8px; border-top: 1px solid #e8ede9;
+    font-size: 8.5px; color: #ccc; display: flex; justify-content: space-between; align-items: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-logo">
+    <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="14" cy="14" r="13" stroke="#2a5c45" stroke-width="1.5"/>
+      <circle cx="14" cy="14" r="3" fill="#2a5c45"/>
+      <line x1="14" y1="2" x2="14" y2="8" stroke="#2a5c45" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="14" y1="20" x2="14" y2="26" stroke="#2a5c45" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="2" y1="14" x2="8" y2="14" stroke="#2a5c45" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="20" y1="14" x2="26" y2="14" stroke="#2a5c45" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="14" y1="14" x2="10" y2="8" stroke="#b94a28" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <div class="header-title">Boussole By M PLUS M</div>
+    </div>
+  </div>
+  <div class="header-right" style="position:relative">
+    <input class="project-input" id="proj-name" placeholder="Nom du projet..." oninput="updateNav(); autoSave()">
+    <button class="btn" onclick="toggleSaveList()" title="Projets sauvegardés">&#128193; Projets</button>
+    <button class="btn" onclick="saveProject()" title="Sauvegarder le projet">&#128190; Sauvegarder</button>
+    <button class="btn" onclick="copyShareLink()" title="Copier le lien partagé">&#128279; Partager</button>
+    <button class="btn btn-accent" onclick="openPdf()">&#128196; Générer PDF</button>
+    <div class="save-list" id="save-list" style="display:none"></div>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="layout">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="nav-section-label">Intention</div>
+    <div class="nav-item" onclick="showSection('philosophie', this)">
+      <span class="nav-dot" style="background:#8b7355"></span>
+      Philosophie
+    </div>
+    <div class="nav-item" onclick="showSection('mode-emploi', this)">
+      <span class="nav-dot" style="background:#8b7355"></span>
+      Mode d'emploi
+    </div>
+    <div class="nav-section-label">Vue d'ensemble</div>
+    <div class="nav-item active" onclick="showSection('dashboard', this)">
+      <span class="nav-dot" style="background:#2a5c45"></span>
+      Tableau de bord
+    </div>
+    <div class="nav-section-label">Thématiques</div>
+    <div class="nav-item" onclick="showSection('energie', this)">
+      <span class="nav-dot" style="background:var(--energie)"></span>
+      Énergie
+      <span class="nav-score" id="nav-score-energie">—</span>
+    </div>
+    <div class="nav-item" onclick="showSection('biodiversite', this)">
+      <span class="nav-dot" style="background:var(--biodiversite)"></span>
+      Biodiversité
+      <span class="nav-score" id="nav-score-biodiversite">—</span>
+    </div>
+    <div class="nav-item" onclick="showSection('eau', this)">
+      <span class="nav-dot" style="background:var(--eau)"></span>
+      Eau
+      <span class="nav-score" id="nav-score-eau">—</span>
+    </div>
+    <div class="nav-item" onclick="showSection('ressources', this)">
+      <span class="nav-dot" style="background:var(--ressources)"></span>
+      Ressources
+      <span class="nav-score" id="nav-score-ressources">—</span>
+    </div>
+    <div class="nav-item" onclick="showSection('sante', this)">
+      <span class="nav-dot" style="background:var(--sante)"></span>
+      Santé
+      <span class="nav-score" id="nav-score-sante">—</span>
+    </div>
+    <div class="nav-item" onclick="showSection('usage', this)">
+      <span class="nav-dot" style="background:var(--usage)"></span>
+      Usage & Territoire
+      <span class="nav-score" id="nav-score-usage">—</span>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- PHILOSOPHIE -->
+    <section class="section" id="section-philosophie">
+      <div class="page-header">
+        <div class="page-title" style="color:#5c4a2a">Philosophie</div>
+        <div class="page-subtitle">La raison d'être de la Boussole Environnementale</div>
+      </div>
+
+      <div style="background:white; border:1px solid var(--border); border-radius:var(--radius); padding:2rem; box-shadow:var(--shadow); margin-bottom:1.25rem;">
+        <div style="font-size:22px; font-weight:700; color:#2a5c45; letter-spacing:-.5px; line-height:1.3; margin-bottom:1.25rem;">« Orienter les projets immobiliers vers une performance environnementale réelle et vérifiable »</div>
+        <p style="color:#444; line-height:1.75; margin-bottom:1rem;">La Boussole By M PLUS M est un outil d'aide à la décision conçu pour accompagner les acteurs de la construction et de l'aménagement dans l'évaluation et l'amélioration de la performance environnementale et sociale de leurs projets — dès les phases amont, là où les choix ont le plus d'impact.</p>
+        <p style="color:#444; line-height:1.75;">Elle repose sur une conviction : <strong>la transition écologique du secteur immobilier ne se fera pas par la conformité réglementaire et chacun dans son silot, mais par une culture de la qualité environnementale partagée entre maîtres d'ouvrage, concepteurs et acteurs du territoire.</strong></p>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.25rem;">
+        <div style="background:white; border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem; box-shadow:var(--shadow);">
+          <div style="font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#8b7355; margin-bottom:.75rem;">Ce que la Boussole est</div>
+          <ul style="list-style:none; padding:0; color:#444;">
+            <li style="display:flex; gap:10px; margin-bottom:.6rem; line-height:1.5;"><span style="color:#2a5c45; font-size:16px; flex-shrink:0;">✓</span> Un cadre d'évaluation multicritère couvrant 6 thématiques clés</li>
+            <li style="display:flex; gap:10px; margin-bottom:.6rem; line-height:1.5;"><span style="color:#2a5c45; font-size:16px; flex-shrink:0;">✓</span> Un outil de dialogue entre maîtrise d'ouvrage et équipe projet pour challenger la conception d'un projet</li>
+            <li style="display:flex; gap:10px; margin-bottom:.6rem; line-height:1.5;"><span style="color:#2a5c45; font-size:16px; flex-shrink:0;">✓</span> Un outil d'aide à la décision, pas de certification</li>
+            <li style="display:flex; gap:10px; line-height:1.5;"><span style="color:#2a5c45; font-size:16px; flex-shrink:0;">✓</span> Une boussole pour s'orienter, et prendre des décisions en conscience</li>
+          </ul>
+        </div>
+        <div style="background:white; border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem; box-shadow:var(--shadow);">
+          <div style="font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#8b7355; margin-bottom:.75rem;">Ce qu'elle n'est pas</div>
+          <ul style="list-style:none; padding:0; color:#444;">
+            <li style="display:flex; gap:10px; margin-bottom:.6rem; line-height:1.5;"><span style="color:#b94a28; font-size:16px; flex-shrink:0;">✗</span> Un label ou une certification (HQE, BREEAM, LEED…)</li>
+            <li style="display:flex; gap:10px; margin-bottom:.6rem; line-height:1.5;"><span style="color:#b94a28; font-size:16px; flex-shrink:0;">✗</span> Un substitut aux études techniques spécialisées</li>
+            <li style="display:flex; gap:10px; margin-bottom:.6rem; line-height:1.5;"><span style="color:#b94a28; font-size:16px; flex-shrink:0;">✗</span> Un outil réglementaire opposable</li>
+            <li style="display:flex; gap:10px; line-height:1.5;"><span style="color:#b94a28; font-size:16px; flex-shrink:0;">✗</span> Une check-list figée sans contexte territorial</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="background:#f0f7f3; border:1px solid #b8d9cb; border-radius:var(--radius); padding:1.25rem 1.5rem; margin-bottom:1.25rem;">
+        <div style="font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#2a5c45; margin-bottom:.75rem;">Les 6 thématiques — une vision systémique</div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:.75rem;">
+          <div style="display:flex; gap:8px; align-items:flex-start;"><span style="width:10px; height:10px; border-radius:50%; background:var(--energie); flex-shrink:0; margin-top:3px;"></span><div><strong style="font-size:13px;">Énergie</strong><div style="font-size:12px; color:#6b6b66;">Performance & décarbonation</div></div></div>
+          <div style="display:flex; gap:8px; align-items:flex-start;"><span style="width:10px; height:10px; border-radius:50%; background:var(--biodiversite); flex-shrink:0; margin-top:3px;"></span><div><strong style="font-size:13px;">Biodiversité</strong><div style="font-size:12px; color:#6b6b66;">Biotope & écologie</div></div></div>
+          <div style="display:flex; gap:8px; align-items:flex-start;"><span style="width:10px; height:10px; border-radius:50%; background:var(--eau); flex-shrink:0; margin-top:3px;"></span><div><strong style="font-size:13px;">Eau</strong><div style="font-size:12px; color:#6b6b66;">Pluviale & consommation</div></div></div>
+          <div style="display:flex; gap:8px; align-items:flex-start;"><span style="width:10px; height:10px; border-radius:50%; background:var(--ressources); flex-shrink:0; margin-top:3px;"></span><div><strong style="font-size:13px;">Ressources</strong><div style="font-size:12px; color:#6b6b66;">Matériaux & économie circulaire</div></div></div>
+          <div style="display:flex; gap:8px; align-items:flex-start;"><span style="width:10px; height:10px; border-radius:50%; background:var(--sante); flex-shrink:0; margin-top:3px;"></span><div><strong style="font-size:13px;">Santé</strong><div style="font-size:12px; color:#6b6b66;">Confort & qualité d'air</div></div></div>
+          <div style="display:flex; gap:8px; align-items:flex-start;"><span style="width:10px; height:10px; border-radius:50%; background:var(--usage); flex-shrink:0; margin-top:3px;"></span><div><strong style="font-size:13px;">Usage & Territoire</strong><div style="font-size:12px; color:#6b6b66;">Mobilité & ancrage local</div></div></div>
+        </div>
+      </div>
+
+      <div style="background:white; border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem 1.5rem; box-shadow:var(--shadow);">
+        <div style="font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#8b7355; margin-bottom:.75rem;">Origine & démarche</div>
+        <p style="color:#444; line-height:1.75;">La Boussole est développée par <strong>M PLUS M</strong>, opérateur immobilier d'entreprise. Elle s'appuie sur les référentiels existants (RE2020, ADEME, réglementations PLU locales) tout en les dépassant pour proposer des niveaux d'ambition progressifs — du simple respect réglementaire jusqu'à un projet ambitieux.</p>
+      </div>
+    </section>
+
+    <!-- MODE D'EMPLOI -->
+    <section class="section" id="section-mode-emploi">
+      <div class="page-header">
+        <div class="page-title" style="color:#5c4a2a">Mode d'emploi</div>
+        <div class="page-subtitle">Comment utiliser la Boussole efficacement</div>
+      </div>
+
+      <div style="background:white; border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem; box-shadow:var(--shadow); margin-bottom:1.25rem;">
+        <div style="font-size:15px; font-weight:600; color:var(--text); margin-bottom:1.25rem;">En 4 étapes</div>
+        <div style="display:flex; flex-direction:column; gap:1rem;">
+          <div style="display:flex; gap:16px; align-items:flex-start;">
+            <div style="width:32px; height:32px; border-radius:50%; background:#2a5c45; color:white; font-weight:700; font-size:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">1</div>
+            <div>
+              <div style="font-weight:600; font-size:14px; margin-bottom:.25rem;">Nommer le projet</div>
+              <p style="color:#6b6b66; font-size:13px; line-height:1.6;">Dans le champ en haut à droite, saisir le nom du projet. Cliquer sur <strong>Sauvegarder</strong> pour enregistrer la session. L'auto-sauvegarde s'active dès qu'un projet est nommé.</p>
+            </div>
+          </div>
+          <div style="display:flex; gap:16px; align-items:flex-start;">
+            <div style="width:32px; height:32px; border-radius:50%; background:#2a5c45; color:white; font-weight:700; font-size:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">2</div>
+            <div>
+              <div style="font-weight:600; font-size:14px; margin-bottom:.25rem;">Évaluer chaque thématique</div>
+              <p style="color:#6b6b66; font-size:13px; line-height:1.6;">Naviguer thématique par thématique dans le menu gauche. Pour chaque critère, sélectionner le niveau qui correspond à l'état ou l'ambition du projet. Les scores (0 à 4) se calculent automatiquement et se voient appliquer un coefficient pondérateur. Des bonus sont disponibles pour certains engagements volontaires.</p>
+            </div>
+          </div>
+          <div style="display:flex; gap:16px; align-items:flex-start;">
+            <div style="width:32px; height:32px; border-radius:50%; background:#2a5c45; color:white; font-weight:700; font-size:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">3</div>
+            <div>
+              <div style="font-weight:600; font-size:14px; margin-bottom:.25rem;">Consulter le tableau de bord</div>
+              <p style="color:#6b6b66; font-size:13px; line-height:1.6;">Le tableau de bord affiche en temps réel le profil radar du projet, les scores par thématique et le score global. Il permet d'identifier rapidement les points forts et les axes d'amélioration.</p>
+            </div>
+          </div>
+          <div style="display:flex; gap:16px; align-items:flex-start;">
+            <div style="width:32px; height:32px; border-radius:50%; background:#2a5c45; color:white; font-weight:700; font-size:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">4</div>
+            <div>
+              <div style="font-weight:600; font-size:14px; margin-bottom:.25rem;">Générer un rapport PDF</div>
+              <p style="color:#6b6b66; font-size:13px; line-height:1.6;">Le bouton <strong>Générer PDF</strong> produit un rapport synthétique imprimable avec les scores, le profil de performance et le détail de chaque critère évalué — prêt à être partagé avec toutes les parties prenantes du projet.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.25rem;">
+        <div style="background:white; border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem; box-shadow:var(--shadow);">
+          <div style="font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#8b7355; margin-bottom:.75rem;">Lecture des scores</div>
+          <div style="display:flex; flex-direction:column; gap:.5rem; font-size:13px;">
+            <div style="display:flex; align-items:center; gap:10px;"><span style="font-family:'DM Mono',monospace; font-weight:700; width:28px; color:#b94a28;">0</span><span style="color:#444;">Non renseigné ou conforme à la réglementation</span></div>
+            <div style="display:flex; align-items:center; gap:10px;"><span style="font-family:'DM Mono',monospace; font-weight:700; width:28px; color:#d97706;">1</span><span style="color:#444;">Projet avec une performance allant au-delà de la réglementation</span></div>
+            <div style="display:flex; align-items:center; gap:10px;"><span style="font-family:'DM Mono',monospace; font-weight:700; width:28px; color:#ca8a04;">2</span><span style="color:#444;">Projet avec de bonnes pratiques reconnues mais limitées</span></div>
+            <div style="display:flex; align-items:center; gap:10px;"><span style="font-family:'DM Mono',monospace; font-weight:700; width:28px; color:#4d7c0f;">3</span><span style="color:#444;">Projet responsable incluant des bonnes pratiques solides et vérifiables </span></div>
+            <div style="display:flex; align-items:center; gap:10px;"><span style="font-family:'DM Mono',monospace; font-weight:700; width:28px; color:#2a5c45;">4</span><span style="color:#444;">Projet ambitieux qui vise la régénération</span></div>
+          </div>
+        </div>
+        <div style="background:white; border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem; box-shadow:var(--shadow);">
+          <div style="font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#8b7355; margin-bottom:.75rem;">Données réglementaires</div>
+          <p style="color:#444; font-size:13px; line-height:1.65; margin-bottom:.6rem;">Chaque thématique dispose d'un encart <em>Voir données réglementaires</em> qui rappelle les seuils et obligations en vigueur — notamment la RE2020 pour l'énergie et les PLU locaux pour la biodiversité et l'eau.</p>
+          <p style="color:#6b6b66; font-size:12px; line-height:1.5;">Ces données sont indicatives et doivent être vérifiées au regard du contexte territorial précis du projet.</p>
+        </div>
+      </div>
+
+      <div style="background:#fffbf0; border:1px solid #e8d88a; border-radius:var(--radius); padding:1rem 1.25rem; font-size:13px; color:#5a4a10;">
+        <strong>💡 Conseil d'usage :</strong> La Boussole est conçue pour être utilisée en réunion de conception ou en atelier avec le maître d'ouvrage. Elle favorise le dialogue, l'intelligence collective et la co-construction des objectifs environnementaux plutôt qu'un simple remplissage de formulaire. L'idée serait d'avoir un référent en fonction des thématiques qui animerait les discussions. Nous recommandons également de faire 3 versions de la boussole : une en amont avant les études, une au dépôt du PC, une à la livraison. 
+      </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section class="section active" id="section-dashboard">
+      <div class="page-header">
+        <div class="page-title">Tableau de bord</div>
+        <div class="page-subtitle">Synthèse de l'évaluation environnementale du projet</div>
+      </div>
+      <div class="summary-grid" id="summary-grid"></div>
+      <div class="radar-card">
+        <canvas id="radar" width="380" height="340"></canvas>
+      </div>
+      <div class="bars-card">
+        <div class="bars-title">Scores par thématique</div>
+        <div id="bar-scores"></div>
+      </div>
+    </section>
+
+    <!-- ENERGIE -->
+    <section class="section" id="section-energie">
+      <div class="page-header">
+        <div class="page-title" style="color:var(--energie)">Énergie</div>
+        <div class="page-subtitle">Performance énergétique et décarbonation des sources</div>
+      </div>
+      <div class="info-panel">Prérequis : logique de sobriété d'abord, décarbonation ensuite. Compétences : AMO Environnement, BET Fluides. Documents : Rapport ACV.</div>
+      <button class="reg-btn" onclick="toggleReg('reg-energie')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg>
+        Voir données réglementaires
+      </button>
+      <div class="reg-panel" id="reg-energie">
+        <div class="reg-panel-title">Données réglementaires — Énergie</div>
+        <ul>
+          <li><strong>IC Énergie RE2020 :</strong> seuil de référence fixé à 200 kgeqCO₂/m² (applicable 2026–2027, reconduit à partir de 2028)</li>
+          <li>Les paliers d'ambition de la Boussole se mesurent en % de réduction en dessous de ce seuil réglementaire en vigueur.</li>
+        </ul>
+      </div>
+      <div class="criterion-card">
+        <div class="criterion-header">
+          <div class="criterion-title">Critère 1 — Impact Énergie
+            <span class="criterion-info"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg><span class="tooltip">Mesure l'impact carbone des consommations énergétiques du bâtiment sur 50 ans, exprimées en kgeqCO₂/m². Plus le score est élevé, plus l'IC Énergie s'éloigne du seuil réglementaire.</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="criterion-coef">coef. 0,7</span>
+            <span class="score-pill" id="badge-energie-1">—</span>
+          </div>
+        </div>
+        <div class="options" id="opts-energie-1"></div>
+      </div>
+      <div class="criterion-card">
+        <div class="criterion-header">
+          <div class="criterion-title">Critère 2 — Autonomie et résilience énergétique
+            <span class="criterion-info"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg><span class="tooltip">Mesure la capacité du projet à produire une énergie locale, diversifée, et robuste.</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="criterion-coef">coef. 0,3</span>
+            <span class="score-pill" id="badge-energie-2">—</span>
+          </div>
+        </div>
+        <div class="options" id="opts-energie-2"></div>
+      </div>
+    </section>
+
+    <!-- BIODIVERSITE -->
+    <section class="section" id="section-biodiversite">
+      <div class="page-header">
+        <div class="page-title" style="color:var(--biodiversite)">Biodiversité</div>
+        <div class="page-subtitle">Coefficient de biotope et préservation écologique</div>
+      </div>
+      <div class="info-panel">Compétences : Écologie, Architecte. Documents : Diagnostic écologique, surface totale parcelle, plan masse avant/après, feuille de calcul du CBS, démarche de compensation.</div>
+      <button class="reg-btn" onclick="toggleReg('reg-biodiversite')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg>
+        Voir données réglementaires
+      </button>
+      <div class="reg-panel" id="reg-biodiversite">
+        <div class="reg-panel-title">Données réglementaires — Biodiversité</div>
+        <ul>
+          <li>Il n'existe pas de données réglementaires nationales sur le CBS en région Auvergne-Rhône-Alpes.</li>
+          <li>Exception : le PLU de <strong>Nantes</strong> intègre des exigences CBS. Se référer aux PLU locaux pour vérifier si des obligations existent sur le territoire du projet.</li>
+        </ul>
+      </div>
+      <div class="cbs-note">
+        <span class="cbs-note-icon">&#9432;</span>
+        <span><strong>Calcul préalable requis — CBS initial (avant projet) :</strong> avant de renseigner le CBS final, calculer le CBS de l'état actuel de la parcelle (avant toute intervention). Ce CBS initial sert de référence pour les bonus/malus de préservation du site ci-dessous.</span>
+      </div>
+
+      <!-- FICHE CBS ADEME -->
+      <div style="margin-bottom:1rem;">
+        <button class="reg-btn" onclick="toggleFicheCBS()" id="fiche-cbs-btn">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="1.5" width="10" height="13" rx="1.5"/><line x1="6" y1="5" x2="10" y2="5"/><line x1="6" y1="7.5" x2="10" y2="7.5"/><line x1="6" y1="10" x2="9" y2="10"/></svg>
+          Fiche méthode — Coefficient de Biotope par Surface (CBS)
+        </button>
+        <div id="fiche-cbs" style="display:none; margin-top:8px; background:#f7fbf8; border:1px solid #b8d9cb; border-radius:12px; padding:1.5rem; font-size:13px; color:#1a1a18; animation: fadeIn .15s ease;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:1.25rem;">
+            <div style="background:#4d7c0f; color:white; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:4px 10px; border-radius:6px;">Fiche Outil / Méthode · Biodiversité n°11</div>
+            <div style="font-size:11px; color:#6b6b66; font-family:'DM Mono',monospace;">Source ADEME — Cahier technique Écosystèmes dans les territoires</div>
+          </div>
+
+          <div style="font-size:17px; font-weight:700; color:#2a5c45; margin-bottom:.25rem; letter-spacing:-.3px;">Le Coefficient de Biotope par Surface (CBS)</div>
+          <div style="font-size:12px; color:#6b6b66; margin-bottom:1.25rem;">Outil d'évaluation de la qualité environnementale d'une parcelle ou d'un projet urbain</div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.25rem;">
+            <div style="background:white; border:1px solid #ddeedd; border-radius:8px; padding:1rem;">
+              <div style="font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#4d7c0f; margin-bottom:.6rem;">Portée opérationnelle</div>
+              <p style="color:#444; line-height:1.6;">Le CBS décrit la proportion de surfaces favorables à la biodiversité (surface écoaménageable) par rapport à la surface totale d'une parcelle. Il permet d'évaluer la qualité environnementale d'une parcelle, d'un îlot, d'un quartier ou d'un vaste territoire.</p>
+              <p style="color:#444; line-height:1.6; margin-top:.5rem;">La loi ALUR introduit le coefficient de biotope dans le règlement du PLU, qui peut imposer une part minimale de surfaces non imperméabilisées ou éco-aménageables, pour contribuer au maintien de la biodiversité en ville.</p>
+            </div>
+          </div>
+
+          <div style="background:#2a5c45; color:white; border-radius:8px; padding:1rem 1.25rem; margin-bottom:1.25rem; font-size:13px;">
+            <strong>Formule CBS = Surface écoaménageable ÷ Surface de la parcelle</strong><br>
+            <span style="opacity:.85; font-size:12px;">Surface écoaménageable = Σ (surface de type N × coefficient N), avec coefficient entre 0 et 1</span>
+          </div>
+
+          <div style="font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#4d7c0f; margin-bottom:.75rem;">Tableau des coefficients (d'après l'exemple de Berlin)</div>
+          <table style="width:100%; border-collapse:collapse; font-size:12px; margin-bottom:1.25rem;">
+            <thead>
+              <tr style="background:#e8f4ec;">
+                <th style="padding:7px 10px; text-align:left; border:1px solid #c8e0d0; color:#2a5c45; font-weight:600;">Type de surface</th>
+                <th style="padding:7px 10px; text-align:center; border:1px solid #c8e0d0; color:#2a5c45; font-weight:600; width:90px;">Coefficient</th>
+                <th style="padding:7px 10px; text-align:left; border:1px solid #c8e0d0; color:#2a5c45; font-weight:600;">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td style="padding:6px 10px; border:1px solid #ddeedd;">Surfaces imperméables</td><td style="padding:6px 10px; border:1px solid #ddeedd; text-align:center; font-weight:700; color:#b94a28;">0,0</td><td style="padding:6px 10px; border:1px solid #ddeedd; color:#555;">Béton, bitume, asphalte, dalle avec couche de mortier</td></tr>
+              <tr style="background:#fbfdfb;"><td style="padding:6px 10px; border:1px solid #ddeedd;">Surfaces semi-perméables</td><td style="padding:6px 10px; border:1px solid #ddeedd; text-align:center; font-weight:700; color:#d97706;">0,3</td><td style="padding:6px 10px; border:1px solid #ddeedd; color:#555;">Clinker, dallage avec couche de gravier/sable</td></tr>
+              <tr><td style="padding:6px 10px; border:1px solid #ddeedd;">Surfaces semi-ouvertes</td><td style="padding:6px 10px; border:1px solid #ddeedd; text-align:center; font-weight:700; color:#d97706;">0,5</td><td style="padding:6px 10px; border:1px solid #ddeedd; color:#555;">Dalle de bois, pierres, treillis de pelouse — infiltration eau de pluie</td></tr>
+              <tr style="background:#fbfdfb;"><td style="padding:6px 10px; border:1px solid #ddeedd;">Espaces verts sur dalle I</td><td style="padding:6px 10px; border:1px solid #ddeedd; text-align:center; font-weight:700; color:#4d7c0f;">0,5</td><td style="padding:6px 10px; border:1px solid #ddeedd; color:#555;">Rez-de-chaussée / garages, épaisseur terre végétale &lt; 80 cm</td></tr>
+              <tr><td style="padding:6px 10px; border:1px solid #ddeedd;">Espaces verts sur dalle II</td><td style="padding:6px 10px; border:1px solid #ddeedd; text-align:center; font-weight:700; color:#4d7c0f;">0,7</td><td style="padding:6px 10px; border:1px solid #ddeedd; color:#555;">Épaisseur terre végétale supérieure à 80 cm</td></tr>
+              <tr style="background:#fbfdfb;"><td style="padding:6px 10px; border:1px solid #ddeedd;">Espaces verts en pleine terre</td><td style="padding:6px 10px; border:1px solid #ddeedd; text-align:center; font-weight:700; color:#2a5c45;">1,0</td><td style="padding:6px 10px; border:1px solid #ddeedd; color:#555;">Continuité avec la terre naturelle — maximum favorable à la biodiversité</td></tr>
+              <tr><td style="padding:6px 10px; border:1px solid #ddeedd;">Toiture classique</td><td style="padding:6px 10px; border:1px solid #ddeedd; text-align:center; font-weight:700; color:#b94a28;">0,2</td><td style="padding:6px 10px; border:1px solid #ddeedd; color:#555;">Infiltration eau de pluie dans surfaces plantées jusqu'à 10 m</td></tr>
+              <tr style="background:#fbfdfb;"><td style="padding:6px 10px; border:1px solid #ddeedd;">Mur végétalisé</td><td style="padding:6px 10px; border:1px solid #ddeedd; text-align:center; font-weight:700; color:#4d7c0f;">0,5</td><td style="padding:6px 10px; border:1px solid #ddeedd; color:#555;">Végétalisation des murs aveugles jusqu'à 10 m</td></tr>
+              <tr><td style="padding:6px 10px; border:1px solid #ddeedd;">Toiture végétalisée</td><td style="padding:6px 10px; border:1px solid #ddeedd; text-align:center; font-weight:700; color:#4d7c0f;">0,7</td><td style="padding:6px 10px; border:1px solid #ddeedd; color:#555;">Végétalisation extensive ou intensive</td></tr>
+            </tbody>
+          </table>
+      </div>
+      <div class="criterion-card">
+        <div class="criterion-header">
+          <div class="criterion-title">CBS final — Coefficient de Biotope par Surface
+          </div>
+          <span class="score-pill" id="badge-bio-1">—</span>
+        </div>
+        <div class="options" id="opts-bio-1"></div>
+      </div>
+      <div class="bonus-card">
+        <div class="bonus-title">Bonus / malus préservation du site</div>
+        <div id="bonus-bio"></div>
+      </div>
+      <div class="bonus-card">
+        <div class="bonus-title">Bonus compensation volontaire (en région AURA, compenser au minimum la surface artificialisée, pas de compensation de milieu à milieu, le bonus est applicable qu'aux projets non soumis réglementairement)</div>
+        <div id="bonus-bio-comp"></div>
+      </div>
+    </section>
+
+    <!-- EAU -->
+    <section class="section" id="section-eau">
+      <div class="page-header">
+        <div class="page-title" style="color:var(--eau)">Eau</div>
+        <div class="page-subtitle">Gestion des eaux pluviales et réduction des consommations</div>
+      </div>
+      <div class="info-panel">Compétences : BET VRD, BET Fluides. Documents : Plan masse, liste équipements techniques, plan de comptage, note hydraulique.</div>
+      <button class="reg-btn" onclick="toggleReg('reg-eau')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg>
+        Voir données réglementaires
+      </button>
+      <div class="reg-panel" id="reg-eau">
+        <div class="reg-panel-title">Données réglementaires — Eau</div>
+        <ul>
+          <li><strong>PLU-H de Lyon (eaux pluviales) :</strong> le rejet au réseau d'assainissement est possible mais une analyse prioritaire doit être menée pour se déconnecter du réseau. Priorité à la gestion à la parcelle.</li>
+          <li><strong>Réutilisation des eaux non potables</strong> (eaux pluviales / eaux grises traitées) : possible mais encadrée — séparation obligatoire des réseaux, signalétique réglementaire, plan de maintenance.</li>
+           <li><strong>Pluie décennale</strong> Sur Lyon estimée à 60 mm/h .</li>
+        </ul>
+      </div>
+      <div class="criterion-card">
+        <div class="criterion-header">
+          <div class="criterion-title">Critère 1 — Gestion des eaux pluviales
+            <span class="criterion-info"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg><span class="tooltip">Mesure la capacité du projet à gérer une pluie de référence à la parcelle.</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="criterion-coef">coef. 0,4</span>
+            <span class="score-pill" id="badge-eau-1">—</span>
+          </div>
+        </div>
+        <div class="options" id="opts-eau-1"></div>
+      </div>
+      <div class="criterion-card">
+        <div class="criterion-header">
+          <div class="criterion-title">Critère 2 — Eau douce / potable
+            <span class="criterion-info"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg><span class="tooltip">Mesure le niveau de sobriété du projet dans l'usage de l'eau potable et implicitement la qualité des équipements mis en place (hydrocéconomes).</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="criterion-coef">coef. 0,6</span>
+            <span class="score-pill" id="badge-eau-2">—</span>
+          </div>
+        </div>
+        <div class="options" id="opts-eau-2"></div>
+      </div>
+    </section>
+
+    <!-- RESSOURCES -->
+    <section class="section" id="section-ressources">
+      <div class="page-header">
+        <div class="page-title" style="color:var(--ressources)">Ressources</div>
+        <div class="page-subtitle">Impact carbone de construction et stratégie de réemploi</div>
+      </div>
+      <div class="info-panel">Compétences : AMO Réemploi, AMO Environnement. Documents : Rapport ACV, stratégie de réemploi, calculatrice booster du réemploi, annuaire des fournisseurs de réemploi en AURA, DPGF, diagnostic PEMD en réhab ou rénovation.</div>
+      <button class="reg-btn" onclick="toggleReg('reg-ressources')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg>
+        Voir données réglementaires
+      </button>
+      <div class="reg-panel" id="reg-ressources">
+        <div class="reg-panel-title">Données réglementaires — IC Construction RE2020 (ICconstruction_maxmoyen)</div>
+        <table>
+          <tr><th>Usage</th><th>2022–2024</th><th>2024–2027</th><th>2028–2030</th><th>À partir de 2031</th></tr>
+          <tr><td>Maisons individuelles / accolées</td><td>640</td><td>530</td><td>475</td><td>415</td></tr>
+          <tr><td>Logements collectifs</td><td>740</td><td>650</td><td>580</td><td>490</td></tr>
+          <tr><td>Bureaux</td><td>980</td><td>810</td><td>710</td><td>600</td></tr>
+          <tr><td>Enseignement primaire/secondaire</td><td>900</td><td>770</td><td>680</td><td>590</td></tr>
+          <tr><td>Industries/artisanats 3×8h et 8h–18h</td><td>—</td><td>840</td><td>695</td><td>550</td></tr>
+          <tr><td>Établissements sportifs municipaux/scolaires/privés</td><td>—</td><td>900</td><td>760</td><td>620</td></tr>
+        </table>
+        <ul style="margin-top:8px"><li>Valeurs en kgeq. CO₂/m². Se référer à la RE2020 pour les usages non listés.</li></ul>
+      </div>
+      <div class="criterion-card">
+        <div class="criterion-header">
+          <div class="criterion-title">Critère 1 — Impact Carbone construction (RE2020)
+            <span class="criterion-info"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg><span class="tooltip">Mesure l'impact carbone des matériaux et de la construction du projet (hors énergie).</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="criterion-coef">coef. 0,2</span>
+            <span class="score-pill" id="badge-res-1">—</span>
+          </div>
+        </div>
+        <div class="options" id="opts-res-1"></div>
+      </div>
+      <div class="criterion-card">
+        <div class="criterion-header">
+          <div class="criterion-title">Critère 2 — CO₂ évité grâce au réemploi (kgeqCO²/m²)
+            <span class="criterion-info"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg><span class="tooltip">Mesure le gain carbone obtenu grâce au réemploi de matériaux. Pour obtenir le score, il faut utiliser la calculatrice du booster fournie dans la boite à outils.</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="criterion-coef">coef. 0,5</span>
+            <span class="score-pill" id="badge-res-2">—</span>
+          </div>
+        </div>
+        <div class="options" id="opts-res-2"></div>
+      </div>
+      <div class="criterion-card">
+        <div class="criterion-header">
+          <div class="criterion-title">Critère 3 — Nombre de typologies de matériaux réemployés
+            <span class="criterion-info"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg><span class="tooltip">Mesure la diversité des matériaux réemployés dans le projet. Plus la diversité est grande, plus la démarche est structurée.</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="criterion-coef">coef. 0,3</span>
+            <span class="score-pill" id="badge-res-3">—</span>
+          </div>
+        </div>
+        <div class="options" id="opts-res-3"></div>
+      </div>
+      <div class="bonus-card">
+        <div class="bonus-title">Bonus généraux</div>
+        <div id="bonus-res"></div>
+      </div>
+    </section>
+
+    <!-- SANTE -->
+    <section class="section" id="section-sante">
+      <div class="page-header">
+        <div class="page-title" style="color:var(--sante)">Santé</div>
+        <div class="page-subtitle">Qualité de l'air, matériaux et confort des occupants</div>
+      </div>
+      <div class="info-panel">Compétences : BET Acoustique, BET Fluides, Commissioning, AMO Environnement. Documents : Charte chantier, fiche FDES, synoptique ventilation, plan de fin de chantier.</div>
+      <button class="reg-btn" onclick="toggleReg('reg-sante')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg>
+        Voir données réglementaires
+      </button>
+      <div class="reg-panel" id="reg-sante">
+        <div class="reg-panel-title">Données réglementaires — Ventilation / Qualité de l'air intérieur</div>
+        <ul>
+          <li><strong>Débits minimaux d'air neuf par occupant (VMC) :</strong></li>
+          <li>Bureaux : <strong>25 m³/h/personne</strong></li>
+          <li>Locaux de réunion : <strong>30 m³/h/personne</strong></li>
+          <li>Ces valeurs constituent le seuil réglementaire de base (score 0 à 1 sur la Boussole). Toute amélioration au-delà (pilotage CO², débit adapté aux pics) contribue aux niveaux supérieurs.</li>
+        </ul>
+      </div>
+      <div class="criterion-card">
+        <div class="criterion-header">
+          <div class="criterion-title">Critère 1 — Qualité de l'air intérieur
+            <span class="criterion-info"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg><span class="tooltip">Mesure la capacité du projet à garantir un air intérieur sain.</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="criterion-coef">coef. 0,25</span>
+            <span class="score-pill" id="badge-san-1">—</span>
+          </div>
+        </div>
+        <div class="options" id="opts-san-1"></div>
+      </div>
+      <div class="criterion-card">
+        <div class="criterion-header">
+          <div class="criterion-title">Critère 2 — Matériaux à faibles émissions de COV
+            <span class="criterion-info"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg><span class="tooltip">Mesure le niveau de maîtrise des émissions polluantes des matériaux.</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="criterion-coef">coef. 0,25</span>
+            <span class="score-pill" id="badge-san-2">—</span>
+          </div>
+        </div>
+        <div class="options" id="opts-san-2"></div>
+      </div>
+      <div class="criterion-card">
+        <div class="criterion-header">
+          <div class="criterion-title">Critère 3 — Chantier à faibles nuisances
+            <span class="criterion-info"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg><span class="tooltip">Mesure la capacité du chantier à limiter les pollutions et nuisances pour la santé.</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="criterion-coef">coef. 0,25</span>
+            <span class="score-pill" id="badge-san-3">—</span>
+          </div>
+        </div>
+        <div class="options" id="opts-san-3"></div>
+      </div>
+      <div class="criterion-card">
+        <div class="criterion-header">
+          <div class="criterion-title">Critère 4 — Confort santé (au-delà de la réglementation)
+            <span class="criterion-info"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg><span class="tooltip">Mesure la prise en compte du confort des occupants au-delà du réglementaire sur trois sujets : Confort été/hiver, luminosité naturelle, acoustique.</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="criterion-coef">coef. 0,25</span>
+            <span class="score-pill" id="badge-san-4">—</span>
+          </div>
+        </div>
+        <div class="options" id="opts-san-4"></div>
+      </div>
+    </section>
+
+    <!-- USAGE -->
+    <section class="section" id="section-usage">
+      <div class="page-header">
+        <div class="page-title" style="color:var(--usage)">Usage & Territoire</div>
+        <div class="page-subtitle">Optimisation des usages, réversibilité et ancrage local</div>
+      </div>
+      <div class="info-panel">Compétences : Architecte, BET Structure. Documents : Grille évaluation calcul potentiel de réversibilité, méthode de calcul de l'IU et IU Max, Grille d'évaluation de la contribution territoriale.</div>
+      <button class="reg-btn" onclick="toggleReg('reg-usage')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg>
+        Voir données réglementaires
+      </button>
+      <div class="reg-panel" id="reg-usage">
+        <div class="reg-panel-title">Données réglementaires — Usage & Territoire</div>
+        <ul>
+          <li>Il n'existe pas de données réglementaires spécifiques à l'intensité d'usage ou à la réversibilité en région Auvergne-Rhône-Alpes.</li>
+          <li>Les critères de la Boussole sur cet axe sont volontaires et dépassent le cadre réglementaire actuel.</li>
+        </ul>
+      </div>
+      <div style="margin-bottom:1rem;">
+        <button class="reg-btn" onclick="toggleFicheIU()" id="fiche-iu-btn">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="1.5" width="10" height="13" rx="1.5"/><line x1="6" y1="5" x2="10" y2="5"/><line x1="6" y1="7.5" x2="10" y2="7.5"/><line x1="6" y1="10" x2="9" y2="10"/></svg>
+          Fiche méthode — Calcul de l'Intensité d'Usage (IU)
+        </button>
+        <div id="fiche-iu" style="display:none; margin-top:8px; background:#f4fbfa; border:1px solid #a0d4cc; border-radius:12px; padding:1.5rem; font-size:13px; color:#1a1a18; animation: fadeIn .15s ease;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:1rem;">
+            <div style="background:#0f7a6b; color:white; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:4px 10px; border-radius:6px;">Fiche Méthode · Usage &amp; Territoire</div>
+            <div style="font-size:11px; color:#6b6b66; font-family:'DM Mono',monospace;">Méthode de calcul IU by M PLUS M</div>
+          </div>
+          <div style="font-size:16px; font-weight:700; color:#0f7a6b; margin-bottom:1.25rem; letter-spacing:-.3px;">Intensité d'Usage (IU)</div>
+
+          <!-- Formule principale -->
+          <div style="background:#0f7a6b; color:white; border-radius:8px; padding:1rem 1.25rem; margin-bottom:1.25rem; text-align:center;">
+            <div style="font-size:12px; opacity:.8; margin-bottom:6px; letter-spacing:.04em; text-transform:uppercase;">Formule générale</div>
+            <div style="font-size:15px; font-weight:700;">IU = <span style="border-bottom:2px solid white; padding-bottom:2px;">nb personnes × nb heures</span></div>
+            <div style="font-size:15px; font-weight:700; margin-top:4px;">m²</div>
+          </div>
+
+          <!-- Deux colonnes IU réelle / IU max -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.25rem;">
+
+            <div style="background:white; border:1px solid #c0e8e4; border-radius:8px; padding:1rem;">
+              <div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#0f7a6b; margin-bottom:.75rem;">IU réelle MPLUSM</div>
+              <div style="font-size:12px; color:#555; line-height:1.8; margin-bottom:.75rem;">
+                = <span style="border-bottom:1.5px solid #0f7a6b; padding-bottom:1px;">nb heures × nb jours travaillés × nb personnes</span><br>
+                &nbsp;&nbsp;&nbsp;Surface locaux de bureaux (m²)
+              </div>
+              <div style="font-size:12px; color:#555; margin-bottom:.75rem;">
+                = <span style="border-bottom:1.5px solid #aaa; padding-bottom:1px;">8 × 220 × 6</span><br>
+                &nbsp;&nbsp;&nbsp;305
+              </div>
+              <div style="font-size:18px; font-weight:700; color:#0f7a6b;">IU réelle = 35</div>
+              <div style="margin-top:.75rem; font-size:11px; color:#777; line-height:1.7; border-top:1px solid #e0f0ee; padding-top:.65rem;">
+                <strong>Avec :</strong><br>
+                nb heures : 8h de présence/jour/collab<br>
+                nb jours travaillés : 220 j/an<br>
+                nb personnes : 6 collaborateurs en moyenne<br>
+                Surface bureaux : 305 m²
+              </div>
+            </div>
+
+            <div style="background:white; border:1px solid #c0e8e4; border-radius:8px; padding:1rem;">
+              <div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#0f7a6b; margin-bottom:.75rem;">IU max MPLUSM (capacité max du site)</div>
+              <div style="font-size:12px; color:#555; line-height:1.8; margin-bottom:.75rem;">
+                = <span style="border-bottom:1.5px solid #0f7a6b; padding-bottom:1px;">nb heures/jour × nb jours/an × nb personnes max</span><br>
+                &nbsp;&nbsp;&nbsp;Surface locaux de bureaux (m²)
+              </div>
+              <div style="font-size:12px; color:#555; margin-bottom:.75rem;">
+                = <span style="border-bottom:1.5px solid #aaa; padding-bottom:1px;">24 × 365 × 20</span><br>
+                &nbsp;&nbsp;&nbsp;305
+              </div>
+              <div style="font-size:18px; font-weight:700; color:#0f7a6b;">IU max = 574</div>
+              <div style="margin-top:.75rem; font-size:11px; color:#777; line-height:1.7; border-top:1px solid #e0f0ee; padding-top:.65rem;">
+                <strong>Avec :</strong><br>
+                nb heures/jour : 24<br>
+                nb jours/an : 365<br>
+                nb personnes max : 20 (capacité maximale)<br>
+                Surface bureaux : 305 m²
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+      <div class="criterion-card">
+        <div class="criterion-header">
+          <div class="criterion-title">Critère 1 — Intensité d'usage
+            <span class="criterion-info"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg><span class="tooltip">Mesure le niveau d'optimisation et de mutualisation des usages du bâtiment.</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="criterion-coef">coef. 0,2</span>
+            <span class="score-pill" id="badge-usage-1">—</span>
+          </div>
+        </div>
+        <div class="options" id="opts-usage-1"></div>
+      </div>
+      <div class="criterion-card">
+        <div class="criterion-header">
+          <div>
+            <div class="criterion-title">Critère 2 — Potentiel de réversibilité
+              <span class="criterion-info"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg><span class="tooltip">Mesure la résilience du projet par sa capacité à changer d'usage dans le temps (logements, bureaux, commerces…).</span></span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="criterion-coef">coef. 0,4</span>
+            <span class="score-pill" id="badge-usage-2">—</span>
+          </div>
+        </div>
+        <div class="options" id="opts-usage-2"></div>
+      </div>
+      <div class="criterion-card">
+        <div class="criterion-header">
+            <div class="criterion-title">Critère 3 — Contribution territoriale
+              <span class="criterion-info"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg><span class="tooltip">Mesure la contribution du projet à son territoire et ses usages locaux. Pour obtenir le score, il faut utiliser la grille d'évaluation ICT fournie dans la boite à outils.</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="criterion-coef">coef. 0,4</span>
+            <span class="score-pill" id="badge-usage-3">—</span>
+          </div>
+        </div>
+        <div class="options" id="opts-usage-3"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- PRINT ZONE (hidden, shown only on print) -->
+<div id="pdf-printzone"></div>
+
+<!-- PDF MODAL -->
+<div class="modal-overlay" id="pdf-modal">
+  <div class="modal" style="max-width:700px;max-height:88vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <div class="modal-title">Rapport d'évaluation</div>
+      <button class="modal-close" onclick="closePdf()">×</button>
+    </div>
+    <div id="pdf-content"></div>
+    <div style="display:flex;gap:10px;margin-top:1.5rem;justify-content:flex-end;">
+      <button class="btn" onclick="closePdf()">Fermer</button>
+      <button class="btn btn-accent" onclick="printReport()">🖨️ Imprimer / Enregistrer PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CRITERIA = {
+  'energie-1': { label: 'IC Énergie sur 50 ans', coef: 0.7, opts: [
+    [0,'IC Énergie conforme à la réglementation 2026-2027'],
+    [1,'IC Énergie inférieur au moins 10 % au seuil réglementaire en vigueur'],
+    [2,'IC Énergie inférieur au moins 15 % au seuil réglementaire en vigueur'],
+    [3,'IC Énergie inférieur au moins 20 % au seuil réglementaire en vigueur'],
+    [4,'IC Énergie inférieur au moins 30 % au seuil réglementaire en vigueur'],
+  ]},
+  'energie-2': { label: 'Autonomie et Résilience énergétique', coef: 0.3, opts: [
+    [0,'Absence de production énergie renouvelable sur site et recours à un système énergétique standard'],
+    [1,'Projet conforme aux exigences réglementaires minimales (loi APER) en matières équipements photovoltaïques en toiture et ombrières de parking'],
+    [2,'Production énergie renouvelable renforcée, avec installation de panneaux photovoltaïque sur toutes les surfaces mobilisables, complétée par une pompe à chaleur air/eau'],
+    [3,'Score 2 complété par un système de géothermie'],
+    [4,'Haut niveau autonomie énergétique, reposant sur une production majoritairement assurée par des panneaux photovoltaïque et la géothermie.'],
+  ]},
+  'bio-1': { label: 'CBS final', coef: 1, opts: [
+    [0,'CBS < 0,2 — forte artificialisation, perte écologique'],
+    [1,'CBS 0,2–0,3 — artificialisation positive mais limitée, gain faible'],
+    [2,'CBS 0,3–0,5 — acceptable, améliorations nécessaires'],
+    [3,'CBS 0,5–0,7 — projet de bonne qualité écologique'],
+    [4,'CBS ≥ 0,7 — désartificialisation ou renaturation, fort gain écologique'],
+  ]},
+  'eau-1': { label: 'Gestion eaux pluviales (Ce critère mesure la capacité du projet à absorber ou ralentir une pluie de référence sur la parcelle)', coef: 0.5, opts: [
+    [0,'Gestion de la pluie décennale par rétention temporaire et/ou par des aménagements paysagers'],
+    [1,'Gestion de la pluie vicennale par rétention temporaire et/ou par des aménagements paysagers'],
+    [2,'Gestion de la pluie centennale avec rejet maîtrisé au réseau'],
+    [3,'Gestion de la pluie centennale avec réinfiltration majoritaire à la parcelle'],
+    [4,'Gestion de la pluie centenalle avec réinfiltration de 100 % des eaux pluviales à la parcelle'],
+  ]},
+  'eau-2': { label: 'Gestion eau potable', coef: 0.5, opts: [
+    [0,'Socle standard sans démarche structurée de réduction ou suivi'],
+    [1,'Quelques mesures de maîtrise, pilotage sommaire, peu d\'équipements'],
+    [2,'Stratégie de sobriété, équipements performants partiels, comptage partiel'],
+    [3,'Démarche complète, équipements généralisés, GTB, réutilisation eaux grises'],
+    [4,'Autonomie très avancée, réemploi interne et recyclage en boucle locale'],
+  ]},
+  'res-1': { label: 'IC Construction', coef: 0.2, opts: [
+    [0,'IC Construction au niveau réglementaire (seuil 2025)'],
+    [1,'IC Construction meilleur que seuil 2025, moins bon que 2028'],
+    [2,'IC Construction atteint le seuil 2028'],
+    [3,'IC Construction meilleur que seuil 2028, moins bon que 2031'],
+    [4,'IC Construction atteint le seuil 2031'],
+  ]},
+  'res-2': { label: 'CO₂ évité réemploi', coef: 0.5, opts: [
+    [0,'0 kgeqCO²/m² — pas de réemploi, aucun gain'],
+    [1,'1 à 40 kgeqCO²/m² — quelques gestes symboliques'],
+    [2,'41 à 79 kgeqCO²/m² — démarche réelle mais partielle'],
+    [3,'80 à 119 kgeqCO²/m² — réemploi important, projet responsable'],
+    [4,'> 120 kgeqCO²/m² — réemploi très significatif, projet ambitieux'],
+  ]},
+  'res-3': { label: 'Typologies réemploi', coef: 0.3, opts: [
+    [0,'Aucune typologie de matériaux issue du réemploi'],
+    [1,'1 typologie de matériaux issue du réemploi'],
+    [2,'2 typologies de matériaux issues du réemploi'],
+    [3,'3 à 4 typologies de matériaux issues du réemploi'],
+    [4,'5+ typologies dont au moins 1 matériau significatif'],
+  ]},
+  'san-1': { label: 'Qualité air intérieur', coef: 0.25, opts: [
+    [0,'Risque élevé ou pas d\'études claires, aucun plan de fin de chantier'],
+    [1,'Ventilation standard conforme, sans pilotage CO², filtration minimale'],
+    [2,'Ventilation standard bien dimensionnée, filtration standard, maintenance prévue'],
+    [3,'Ventilation avec pilotage CO², filtration renforcée, plan fin de chantier'],
+    [4,'Niveau 3 + commissioning, mesure QAI post-chantier et suivi exploitation'],
+  ]},
+  'san-2': { label: 'Matériaux COV', coef: 0.25, opts: [
+    [0,'Aucun cadrage, produits très émissifs, pas de traçabilité'],
+    [1,'Recommandations générales sans contrôle ni liste de produits'],
+    [2,'Exigences faibles émissions sur la majorité des lots, traçabilité incomplète'],
+    [3,'Exigences faibles émissions tous lots clés, traçabilité partielle majoritaire'],
+    [4,'Tous lots clés + liste de produits tracés et exclusions (solvants, etc.)'],
+  ]},
+  'san-3': { label: 'Chantier propre', coef: 0.25, opts: [
+    [0,'Aucun plan, risques de pollution chantier élevés'],
+    [1,'Chantier standard avec tri minimal, pas de protocole poussière/COV'],
+    [2,'Plan chantier propre, gestion des déchets, mesures poussières/COV basiques'],
+    [3,'Plan formalisé, gestion poussières/COV, gestion déchets, référent identifié'],
+    [4,'Niveau 3 + dispositif de contrôle et traçabilité pendant le chantier'],
+  ]},
+  'san-4': { label: 'Confort santé', coef: 0.25, opts: [
+    [0,'Aucune démarche de confort au-delà du réglementaire'],
+    [1,'1 sujet traité parmi : acoustique, confort été/hiver, luminosité'],
+    [2,'2 sujets traités avec preuves'],
+    [3,'Les 3 sujets traités : acoustique, confort été/hiver, luminosité avec preuves'],
+    [4,'Objectifs chiffrés sur les 3 sujets + suivi en exploitation'],
+  ]},
+  'usage-1': { label: 'Intensité d\'usage', coef: 0.2, opts: [
+    [0,'< 10% — sous-occupation, aucune mutualisation'],
+    [1,'10% à 15% — usage mono-fonction'],
+    [2,'15% à 20% — bonne utilisation, quelques espaces partagés'],
+    [3,'20% à 25% — forte optimisation, mutualisation, hybridation'],
+    [4,'> 25% — locaux fortement optimisés sur tous les temps de l\'année'],
+  ]},
+  'usage-2': { label: 'Réversibilité', coef: 0.4, opts: [
+    [0,'Bâtiment destiné à un seul usage et/ou un seul utilisateur, devra être démoli à +50%'],
+    [1,'Bâtiment ayant besoin d\'une restructuration lourde pour trouver d\'autres usages'],
+    [2,'Bâtiment dont l\'enveloppe et la hauteur sous plafond sont limité (logements impossible)'],
+    [3,'Bâtiment réversible mais mon PLU me le permet pas'],
+    [4,'Bâtiment réversible qui permet différents usages, et je peux modifier mes autorisations administratives'],
+  ]},
+  'usage-3': { label: 'Contribution territoriale', coef: 0.4, opts: [
+    [0,'0 à 2 points (contribution faible)'],
+    [1,'3 à 5 points'],
+    [2,'6 à 9 points'],
+    [3,'10 à 13 points'],
+    [4,'14 à 16 points (contribution maximale)'],
+  ]},
+};
+
+const THEMES = {
+  energie:      { label: 'Énergie',           keys: ['energie-1','energie-2'], color: '#d97706' },
+  biodiversite: { label: 'Biodiversité',       keys: ['bio-1'],                color: '#4d7c0f', bonus: true },
+  eau:          { label: 'Eau',                keys: ['eau-1','eau-2'],         color: '#1d6fa4' },
+  ressources:   { label: 'Ressources',         keys: ['res-1','res-2','res-3'], color: '#b94a28', bonus: 'res' },
+  sante:        { label: 'Santé',              keys: ['san-1','san-2','san-3','san-4'], color: '#6d51b8' },
+  usage:        { label: 'Usage & Territoire', keys: ['usage-1','usage-2','usage-3'], color: '#0f7a6b' },
+};
+
+let scores = {};
+let bonuses = {};
+let radarChart = null;
+
+function buildOptions(key) {
+  const c = CRITERIA[key];
+  const container = document.getElementById('opts-' + key);
+  if (!container) return;
+  [...c.opts].reverse().forEach(([val, label]) => {
+    const div = document.createElement('div');
+    div.className = 'option' + (scores[key] === val ? ' selected' : '');
+    div.innerHTML = `<span class="option-score">${val}</span><span class="option-label">${label}</span>`;
+    div.onclick = () => selectOption(key, val, div);
+    container.appendChild(div);
+  });
+}
+
+function selectOption(key, val, el) {
+  scores[key] = val;
+  el.parentNode.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  const badge = document.getElementById('badge-' + key);
+  if (badge) { badge.textContent = val + '/4'; badge.classList.add('filled'); }
+  updateDashboard();
+  autoSave();
+}
+
+function buildBonusBio() {
+  const items = [
+    { id: 'bio-b1', val: 1,  label: '+1 — delta CBS ≥ +0,15 (gain significatif)' },
+    { id: 'bio-b2', val: -1, label: '−1 — delta CBS ≤ −0,05 (trois premières tranches)' },
+    { id: 'bio-b3', val: 1,  label: '+1 — CBS initial élevé (deux tranches hautes) et stabilité maintenue (−0,03 max)' },
+  ];
+  const comp = [
+    { id: 'bio-b4', val: 1, label: '+1 — compensation documentée remplissant ≥ 2 critères (volontaire, mesurable (éléments chiffrés), pérenne (engagement entretien sur 5 ans min))' },
+  ];
+  buildBonusBlock('bonus-bio', items);
+  buildBonusBlock('bonus-bio-comp', comp);
+}
+
+function buildBonusRes() {
+  const items = [
+    { id: 'res-b1', val: 0.25, label: '+0,25 — étude de provenance de l\'origine des matières premières' },
+    { id: 'res-b2', val: 0.5,  label: '+0,5 — provenance justifiée pour ≥ 50% des matériaux à moins de 100 km du chantier' },
+    { id: 'res-b3', val: 0.5,  label: '+0,5 — une typologie de matériaux de réemploi est issue d\'une filière émergente ou non structurée' },
+    { id: 'res-b4', val: 1,    label: '+1 — 1% du coût travaux alloué à la fourniture de matériaux de réemploi ou de réutilisation' },
+  ];
+  buildBonusBlock('bonus-res', items);
+}
+
+function toggleReg(id) {
+  const panel = document.getElementById(id);
+  if (!panel) return;
+  panel.classList.toggle('open');
+  const btn = panel.previousElementSibling;
+  if (btn && btn.classList.contains('reg-btn')) {
+    btn.textContent = panel.classList.contains('open') ? ' Masquer les données réglementaires' : ' Voir données réglementaires';
+    const svg = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11"/><circle cx="8" cy="5" r="0.6" fill="currentColor" stroke="none"/></svg>`;
+    btn.innerHTML = svg + btn.textContent;
+  }
+}
+
+function buildBonusBlock(containerId, items) {
+  const c = document.getElementById(containerId);
+  if (!c) return;
+  items.forEach(b => {
+    const div = document.createElement('div');
+    div.className = 'bonus-option';
+    div.innerHTML = `<input type="checkbox" id="${b.id}" onchange="toggleBonus('${b.id}', ${b.val})"><label for="${b.id}">${b.label}</label>`;
+    c.appendChild(div);
+  });
+}
+
+function toggleBonus(id, val) {
+  const cb = document.getElementById(id);
+  bonuses[id] = cb.checked ? val : 0;
+  updateDashboard();
+  autoSave();
+}
+
+function getThemeScore(themeKey) {
+  const theme = THEMES[themeKey];
+  let weighted = 0, totalCoef = 0;
+  theme.keys.forEach(k => {
+    const c = CRITERIA[k];
+    if (scores[k] !== undefined) { weighted += scores[k] * c.coef; totalCoef += c.coef; }
+  });
+  if (totalCoef === 0) return null;
+  let base = weighted / totalCoef;
+  if (themeKey === 'biodiversite') {
+    const sum = ['bio-b1','bio-b2','bio-b3','bio-b4'].reduce((a,b) => a + (bonuses[b] || 0), 0);
+    base = Math.max(0, Math.min(4, base + sum));
+  }
+  if (themeKey === 'ressources') {
+    const sum = ['res-b1','res-b2','res-b3','res-b4'].reduce((a,b) => a + (bonuses[b] || 0), 0);
+    base = Math.max(0, Math.min(4, base + sum));
+  }
+  return base;
+}
+
+function updateDashboard() {
+  const grid = document.getElementById('summary-grid');
+  grid.innerHTML = '';
+  let gNum = 0, gDen = 0;
+
+  Object.entries(THEMES).forEach(([k, t]) => {
+    const s = getThemeScore(k);
+    const card = document.createElement('div');
+    card.className = 'summary-card';
+    const display = s !== null ? s.toFixed(1) : '—';
+    card.innerHTML = `<div class="s-dot" style="background:${t.color}"></div><div class="s-label">${t.label}</div><div class="s-value">${display}<span class="s-max">/4</span></div>`;
+    card.style.cursor = 'pointer';
+    card.onclick = () => {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.getElementById('section-' + k).classList.add('active');
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => { if (n.textContent.trim().startsWith(t.label.substring(0,5))) n.classList.add('active'); });
+    };
+    grid.appendChild(card);
+    const scoreEl = document.getElementById('nav-score-' + k);
+    if (scoreEl) scoreEl.textContent = s !== null ? s.toFixed(1) : '—';
+    if (s !== null) { gNum += s; gDen++; }
+  });
+
+  const globalCard = document.createElement('div');
+  globalCard.className = 'summary-card global';
+  const g = gDen > 0 ? (gNum/gDen).toFixed(1) : '—';
+  globalCard.innerHTML = `<div class="s-dot" style="background:rgba(255,255,255,0.5)"></div><div class="s-label">Score global</div><div class="s-value">${g}<span class="s-max">/4</span></div>`;
+  grid.appendChild(globalCard);
+
+  updateBars();
+  updateRadar();
+}
+
+function updateBars() {
+  const c = document.getElementById('bar-scores');
+  c.innerHTML = '';
+  Object.entries(THEMES).forEach(([k, t]) => {
+    const s = getThemeScore(k);
+    const pct = s !== null ? (s / 4 * 100).toFixed(0) : 0;
+    const row = document.createElement('div');
+    row.className = 'bar-row';
+    row.innerHTML = `<span class="bar-label">${t.label}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${t.color}"></div></div><span class="bar-val">${s !== null ? s.toFixed(1) : '—'}/4</span>`;
+    c.appendChild(row);
+  });
+}
+
+function updateRadar() {
+  const labels = Object.values(THEMES).map(t => t.label);
+  const data = Object.keys(THEMES).map(k => getThemeScore(k) ?? 0);
+  if (!radarChart) {
+    const ctx = document.getElementById('radar').getContext('2d');
+    radarChart = new Chart(ctx, {
+      type: 'radar',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          backgroundColor: 'rgba(74,185,130,0.15)',
+          borderColor: '#3ab87a',
+          borderWidth: 2.5,
+          pointBackgroundColor: '#3ab87a',
+          pointRadius: 5,
+          pointHoverRadius: 7,
+        }]
+      },
+      options: {
+        responsive: false,
+        scales: {
+          r: {
+            min: 0, max: 4,
+            ticks: { stepSize: 1, color: '#a0a09a', font: { size: 11, family: 'DM Mono' }, backdropColor: 'transparent' },
+            grid: { color: 'rgba(0,0,0,0.18)', lineWidth: 1.5 },
+            angleLines: { color: 'rgba(0,0,0,0.18)', lineWidth: 1.5 },
+            pointLabels: { color: '#6b6b66', font: { size: 12, family: 'DM Sans' } }
+          }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+  } else {
+    radarChart.data.datasets[0].data = data;
+    radarChart.update('active');
+  }
+}
+
+
+function toggleFicheIU() {
+  const panel = document.getElementById('fiche-iu');
+  const btn = document.getElementById('fiche-iu-btn');
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    btn.style.color = 'var(--usage)';
+    btn.style.borderColor = 'var(--usage)';
+  } else {
+    panel.style.display = 'none';
+    btn.style.color = '';
+    btn.style.borderColor = '';
+  }
+}
+
+function toggleFicheCBS() {
+  const panel = document.getElementById('fiche-cbs');
+  const btn = document.getElementById('fiche-cbs-btn');
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    btn.style.color = 'var(--accent)';
+    btn.style.borderColor = 'var(--accent)';
+  } else {
+    panel.style.display = 'none';
+    btn.style.color = '';
+    btn.style.borderColor = '';
+  }
+}
+
+function showSection(id, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('section-' + id).classList.add('active');
+  el.classList.add('active');
+}
+
+function updateNav() {}
+
+// ── SAVE / LOAD (local + espace partagé Supabase) ───────────────────────────
+const STORAGE_KEY = 'boussole_projects_local_cache';
+const SPACE_KEY = 'boussole_space_id';
+const SUPABASE_URL = 'https://hkktvffopzetkgyimaya.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_OqcPGrPj3nebdig5Pqzf2g_dlfTT9rL';
+const SUPABASE_TABLE = 'boussole_spaces';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+let currentSpaceId = null;
+let autoSaveTimer = null;
+
+function getProjects() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+}
+function setProjects(p) { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); }
+
+function getState() {
+  return { name: document.getElementById('proj-name').value, scores, bonuses };
+}
+
+function loadState(state) {
+  document.getElementById('proj-name').value = state.name || '';
+  scores = state.scores || {};
+  bonuses = state.bonuses || {};
+  document.querySelectorAll('[id^="opts-"]').forEach(c => c.innerHTML = '');
+  Object.keys(CRITERIA).forEach(buildOptions);
+  Object.entries(bonuses).forEach(([id, val]) => {
+    const cb = document.getElementById(id);
+    if (cb) cb.checked = (val !== 0);
+  });
+  Object.entries(scores).forEach(([k, v]) => {
+    const badge = document.getElementById('badge-' + k);
+    if (badge && v !== undefined) { badge.textContent = v + '/4'; badge.classList.add('filled'); }
+  });
+  updateDashboard();
+}
+
+function sanitizeSpaceId(id) {
+  return String(id || '').trim().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64);
+}
+
+function generateSpaceId() {
+  if (window.crypto?.randomUUID) return 'boussole-' + window.crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+  return 'boussole-' + Math.random().toString(36).slice(2, 18);
+}
+
+function getSpaceIdFromUrl() {
+  return sanitizeSpaceId(new URL(window.location.href).searchParams.get('space'));
+}
+
+function persistSpaceId(spaceId, push = false) {
+  currentSpaceId = sanitizeSpaceId(spaceId);
+  localStorage.setItem(SPACE_KEY, currentSpaceId);
+  const url = new URL(window.location.href);
+  url.searchParams.set('space', currentSpaceId);
+  if (push) history.pushState({}, '', url.toString());
+  else history.replaceState({}, '', url.toString());
+  document.title = `Boussole By MPLUSM — ${currentSpaceId}`;
+}
+
+function ensureSpaceId() {
+  const fromUrl = getSpaceIdFromUrl();
+  const fromLocal = sanitizeSpaceId(localStorage.getItem(SPACE_KEY));
+  const id = fromUrl || fromLocal || generateSpaceId();
+  persistSpaceId(id, false);
+  return id;
+}
+
+function mergeProjects(localProjects, remoteProjects) {
+  const merged = { ...(localProjects || {}) };
+  Object.entries(remoteProjects || {}).forEach(([name, data]) => {
+    const local = merged[name];
+    const remoteDate = data?.savedAt || '';
+    const localDate = local?.savedAt || '';
+    if (!local || remoteDate >= localDate) merged[name] = data;
+  });
+  return merged;
+}
+
+async function fetchCloudProjects(spaceId = currentSpaceId) {
+  const { data, error } = await supabase
+    .from(SUPABASE_TABLE)
+    .select('data')
+    .eq('id', spaceId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data && typeof data.data === 'object' && data.data) ? data.data : {};
+}
+
+async function saveCloudProjects(projects, spaceId = currentSpaceId) {
+  const payload = { id: spaceId, data: projects, updated_at: new Date().toISOString() };
+  const { error } = await supabase.from(SUPABASE_TABLE).upsert(payload);
+  if (error) throw error;
+  setProjects(projects);
+}
+
+async function syncFromCloud() {
+  try {
+    const remote = await fetchCloudProjects();
+    const merged = mergeProjects(getProjects(), remote);
+    setProjects(merged);
+    return merged;
+  } catch (e) {
+    console.warn('Sync cloud impossible', e);
+    return getProjects();
+  }
+}
+
+async function saveProject(showToast = true) {
+  const name = document.getElementById('proj-name').value.trim();
+  if (!name) { alert('Veuillez saisir un nom de projet avant de sauvegarder.'); return; }
+  const projects = getProjects();
+  projects[name] = { ...getState(), savedAt: new Date().toISOString() };
+  setProjects(projects);
+  try {
+    await saveCloudProjects(projects);
+    if (showToast) showSaveConfirm(name);
+  } catch (e) {
+    console.error(e);
+    alert('Sauvegarde cloud impossible. Vérifiez la table Supabase et les policies.');
+  }
+}
+
+function showSaveConfirm(name) {
+  const bar = document.createElement('div');
+  bar.className = 'save-bar';
+  bar.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:500;box-shadow:0 4px 12px rgba(0,0,0,0.1)';
+  bar.innerHTML = `<span>&#10003;</span> <strong>${name}</strong> sauvegardé · espace ${currentSpaceId}`;
+  document.body.appendChild(bar);
+  setTimeout(() => bar.remove(), 2500);
+}
+
+function autoSave() {
+  const name = document.getElementById('proj-name').value.trim();
+  if (!name) return;
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(async () => {
+    const projects = getProjects();
+    if (projects[name]) await saveProject(false);
+  }, 700);
+}
+
+async function toggleSaveList() {
+  const list = document.getElementById('save-list');
+  if (list.style.display === 'none') {
+    await renderSaveList();
+    list.style.display = 'block';
+  } else {
+    list.style.display = 'none';
+  }
+}
+
+async function renderSaveList() {
+  const list = document.getElementById('save-list');
+  list.innerHTML = `<div class="save-list-title">Projets sauvegardés</div><div class="save-list-empty">Chargement…</div>`;
+  let projects = getProjects();
+  try {
+    projects = await syncFromCloud();
+  } catch (e) {
+    console.warn(e);
+  }
+  const entries = Object.entries(projects).sort((a, b) => (b[1]?.savedAt || '').localeCompare(a[1]?.savedAt || ''));
+  if (entries.length === 0) {
+    list.innerHTML = `<div class="save-list-title">Projets sauvegardés</div><div class="save-list-empty">Aucun projet sauvegardé</div>`;
+    return;
+  }
+  list.innerHTML = `<div class="save-list-title">Projets sauvegardés · ${currentSpaceId}</div>` +
+    entries.map(([name, data]) => {
+      const d = data.savedAt ? new Date(data.savedAt).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+      return `<div class="save-list-item" onclick="loadProject(${JSON.stringify(name)})">
+        <div><div class="sli-name">${name}</div><div class="sli-date">${d}</div></div>
+        <button class="save-list-del" onclick="event.stopPropagation();deleteProject(${JSON.stringify(name)})" title="Supprimer">×</button>
+      </div>`;
+    }).join('');
+}
+
+async function loadProject(name) {
+  const projects = await syncFromCloud();
+  const data = projects[name];
+  if (!data) return;
+  loadState(data);
+  document.getElementById('save-list').style.display = 'none';
+}
+
+async function deleteProject(name) {
+  if (!confirm(`Supprimer le projet "${name}" ?`)) return;
+  const projects = await syncFromCloud();
+  delete projects[name];
+  setProjects(projects);
+  try {
+    await saveCloudProjects(projects);
+    await renderSaveList();
+  } catch (e) {
+    console.error(e);
+    alert('Suppression cloud impossible.');
+  }
+}
+
+async function copyShareLink() {
+  const id = ensureSpaceId();
+  const url = new URL(window.location.href);
+  url.searchParams.set('space', id);
+  const shareUrl = url.toString();
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+    const bar = document.createElement('div');
+    bar.className = 'save-bar';
+    bar.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:500;box-shadow:0 4px 12px rgba(0,0,0,0.1)';
+    bar.innerHTML = `🔗 Lien partagé copié`;
+    document.body.appendChild(bar);
+    setTimeout(() => bar.remove(), 2200);
+  } catch {
+    prompt('Copiez ce lien pour partager la Boussole :', shareUrl);
+  }
+}
+
+async function initSharedSpace() {
+  ensureSpaceId();
+  await syncFromCloud();
+}
+
+// Close save list on outside click
+document.addEventListener('click', (e) => {
+  const list = document.getElementById('save-list');
+  if (!list.contains(e.target) && !e.target.closest('[onclick="toggleSaveList()"]')) {
+    list.style.display = 'none';
+  }
+});
+
+// ── PDF GENERATION ─────────────────────────────────────────────────
+
+function buildSvgRadar(themeScores, size) {
+  const cx = size / 2, cy = size / 2;
+  const R = size * 0.38;
+  const entries = Object.entries(themeScores);
+  const n = entries.length;
+  const angleStep = (2 * Math.PI) / n;
+  const startAngle = -Math.PI / 2;
+
+  function pt(i, r) {
+    const a = startAngle + i * angleStep;
+    return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+  }
+
+  // Grid rings
+  let rings = '';
+  for (let lvl = 1; lvl <= 4; lvl++) {
+    const r = R * (lvl / 4);
+    const pts = Array.from({length: n}, (_, i) => pt(i, r)).map(p => p.join(',')).join(' ');
+    rings += `<polygon points="${pts}" fill="none" stroke="#d4e8de" stroke-width="${lvl === 4 ? 1.5 : 1}"/>`;
+    // level label on right axis (index 0 is top)
+    const lp = pt(0, r);
+    if (lvl < 4) rings += `<text x="${lp[0]+4}" y="${lp[1]-3}" font-size="7" fill="#bbb" font-family="DM Mono">${lvl}</text>`;
+  }
+
+  // Spokes
+  let spokes = '';
+  entries.forEach((_, i) => {
+    const [x2, y2] = pt(i, R);
+    spokes += `<line x1="${cx}" y1="${cy}" x2="${x2}" y2="${y2}" stroke="#d4e8de" stroke-width="1"/>`;
+  });
+
+  // Data polygon
+  const dataPoints = entries.map(([k, s], i) => pt(i, R * (s / 4)));
+  const polyPts = dataPoints.map(p => p.join(',')).join(' ');
+  const dataPoly = `<polygon points="${polyPts}" fill="rgba(58,184,122,0.18)" stroke="#2a5c45" stroke-width="2" stroke-linejoin="round"/>`;
+
+  // Data dots
+  let dots = '';
+  dataPoints.forEach(([x, y]) => {
+    dots += `<circle cx="${x}" cy="${y}" r="3.5" fill="#2a5c45"/>`;
+  });
+
+  // Labels
+  let labels = '';
+  const COLORS = Object.values(THEMES).map(t => t.color);
+  entries.forEach(([k, s], i) => {
+    const label = THEMES[k].label;
+    const angle = startAngle + i * angleStep;
+    const labelR = R + 22;
+    const lx = cx + labelR * Math.cos(angle);
+    const ly = cy + labelR * Math.sin(angle);
+    const anchor = Math.abs(Math.cos(angle)) < 0.1 ? 'middle' : (Math.cos(angle) > 0 ? 'start' : 'end');
+    const dy = Math.sin(angle) < -0.5 ? '-0.4em' : (Math.sin(angle) > 0.5 ? '1em' : '0.35em');
+    labels += `<text x="${lx}" y="${ly}" dy="${dy}" text-anchor="${anchor}" font-size="9" font-family="DM Sans" fill="${COLORS[i]}" font-weight="600">${label}</text>`;
+  });
+
+  return `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}">
+    ${rings}${spokes}${dataPoly}${dots}${labels}
+  </svg>`;
+}
+
+function openPdf() {
+  const proj = document.getElementById('proj-name').value || 'Projet sans nom';
+  const now = new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
+  let gNum = 0, gDen = 0;
+
+  const themeScores = {};
+  let themeCards = '';
+  let barRows = '';
+  let legendItems = '';
+
+  Object.entries(THEMES).forEach(([k, t]) => {
+    const s = getThemeScore(k);
+    const display = s !== null ? s.toFixed(1) : 'NC';
+    const pct = s !== null ? (s / 4 * 100).toFixed(1) : 0;
+    themeScores[k] = s !== null ? s : 0;
+    if (s !== null) { gNum += s; gDen++; }
+
+    themeCards += `<div class="pz-theme-card" style="color:${t.color}">
+      <span class="pz-theme-label">${t.label}</span>
+      <span class="pz-theme-score" style="color:${t.color}">${display}<span class="pz-theme-max">/4</span></span>
+    </div>`;
+
+    barRows += `<div class="pz-bar-row">
+      <span class="pz-bar-label" style="color:${t.color};font-weight:600">${t.label}</span>
+      <div class="pz-bar-outer"><div class="pz-bar-inner" style="width:${pct}%;background:${t.color}"></div></div>
+      <span class="pz-bar-val">${display}/4</span>
+    </div>`;
+
+    legendItems += `<div class="pz-legend-item"><div class="pz-legend-dot" style="background:${t.color}"></div>${t.label}</div>`;
+  });
+
+  const global = gDen > 0 ? (gNum/gDen).toFixed(1) : 'NC';
+  const globalPct = gDen > 0 ? ((gNum/gDen)/4*100).toFixed(0) : 0;
+
+  // Individual theme cover scores for cover page
+  let coverScores = '';
+  Object.entries(THEMES).forEach(([k, t]) => {
+    const s = getThemeScore(k);
+    const display = s !== null ? s.toFixed(1) : '—';
+    coverScores += `<div class="pz-cover-score-block">
+      <div class="pz-cover-score-val">${display}<span>/4</span></div>
+      <div class="pz-cover-score-lbl">${t.label}</div>
+    </div>`;
+  });
+
+  // SVG Radar
+  const radarSvg = buildSvgRadar(themeScores, 200);
+
+  // Detailed criteria rows
+  let detailRows = '';
+  Object.entries(THEMES).forEach(([themeKey, t]) => {
+    t.keys.forEach(k => {
+      const c = CRITERIA[k];
+      const val = scores[k];
+      const hasScore = val !== undefined;
+      const selectedLabel = hasScore ? c.opts.find(o => o[0] === val)?.[1] || '' : 'Non renseigné';
+      const badge = hasScore ? `<span class="pz-score-badge" style="background:${t.color}">${val}/4</span>` : `<span style="color:#aaa">—</span>`;
+      detailRows += `<tr>
+        <td style="color:${t.color};font-weight:600;white-space:nowrap">${t.label}</td>
+        <td>${c.label}</td>
+        <td style="text-align:center">${badge}</td>
+        <td style="color:#555">${selectedLabel}</td>
+      </tr>`;
+    });
+  });
+
+  // Score scale legend
+  const levels = [
+    { n: 0, lbl: 'Réglementaire', bg: '#fee2e2', col: '#b94a28' },
+    { n: 1, lbl: 'Au-delà du réglementaire', bg: '#fef3c7', col: '#d97706' },
+    { n: 2, lbl: 'Bonnes pratiques', bg: '#fef9c3', col: '#ca8a04' },
+    { n: 3, lbl: 'Projet responsable', bg: '#dcfce7', col: '#4d7c0f' },
+    { n: 4, lbl: 'Ambition régénératrice', bg: '#d1fae5', col: '#2a5c45' },
+  ];
+  const levelRow = levels.map(l => `<div class="pz-level-item" style="background:${l.bg}">
+    <div class="pz-level-num" style="color:${l.col}">${l.n}</div>
+    <div class="pz-level-lbl">${l.lbl}</div>
+  </div>`).join('');
+
+  // ── COVER PAGE ──────────────────────────────────────────
+  const coverHtml = `<div class="pz-cover">
+    <div class="pz-cover-accent"></div>
+    <div class="pz-cover-dots"></div>
+    <div class="pz-cover-content">
+      <div class="pz-cover-logo-row">
+        <svg class="pz-cover-logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="18" cy="18" r="16" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+          <circle cx="18" cy="18" r="3.5" fill="#3ab87a"/>
+          <line x1="18" y1="4" x2="18" y2="11" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="18" y1="25" x2="18" y2="32" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="4" y1="18" x2="11" y2="18" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="25" y1="18" x2="32" y2="18" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="18" y1="18" x2="13" y2="10" stroke="#3ab87a" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+        <div class="pz-cover-brand">BOUSSOLE ENVIRONNEMENTALE — M PLUS M</div>
+      </div>
+
+      <div>
+        <div class="pz-cover-tag">Évaluation environnementale · ${now}</div>
+        <div class="pz-cover-main-title">Rapport<br>d'évaluation<br>environnementale</div>
+        <div class="pz-cover-sub">Outil d'aide à la décision pour projets immobiliers durables</div>
+
+        <div class="pz-cover-project-box">
+          <div class="pz-cover-project-label">Projet évalué</div>
+          <div class="pz-cover-project-name">${proj}</div>
+        </div>
+
+        <div class="pz-cover-score-row">
+          <div class="pz-cover-score-block highlight">
+            <div class="pz-cover-score-val">${global}<span>/4</span></div>
+            <div class="pz-cover-score-lbl">Score global</div>
+          </div>
+          ${coverScores}
+        </div>
+      </div>
+    </div>
+    <div class="pz-cover-footer">
+      <div class="pz-cover-footer-date">Généré le ${now}</div>
+      <div class="pz-cover-footer-brand">by M PLUS M<br>Opérateur immobilier d'entreprise</div>
+    </div>
+  </div>`;
+
+  // ── REPORT PAGE ──────────────────────────────────────────
+  const reportHtml = `<div class="pz-page">
+    <div class="pz-page-header">
+      <div class="pz-page-header-left">
+        <div class="pz-page-logo">Boussole Environnementale — M PLUS M</div>
+        <div class="pz-page-project">${proj} · ${now}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="pz-page-global">${global}<span>/4</span></div>
+        <div class="pz-page-global-lbl">Score global</div>
+      </div>
+    </div>
+
+    <div class="pz-section-title">Profil radar & performance par thématique</div>
+    <div class="pz-top-row">
+      <div class="pz-radar-wrap">${radarSvg}</div>
+      <div>
+        <div class="pz-theme-grid">${themeCards}</div>
+        <div style="margin-top:8px">${barRows}</div>
+      </div>
+    </div>
+
+    <div class="pz-section-title">Grille de lecture des scores</div>
+    <div class="pz-level-row">${levelRow}</div>
+
+    <div class="pz-section-title">Détail des critères évalués</div>
+    <table class="pz-detail-table">
+      <thead><tr>
+        <th style="width:18%">Thématique</th>
+        <th style="width:28%">Critère</th>
+        <th style="width:8%;text-align:center">Note</th>
+        <th>Description retenue</th>
+      </tr></thead>
+      <tbody>${detailRows}</tbody>
+    </table>
+
+    <div class="pz-footer">
+      <span>Boussole Environnementale — Outil d'aide à la décision — by M PLUS M</span>
+      <span>Ce document est une évaluation volontaire, non opposable réglementairement</span>
+    </div>
+  </div>`;
+
+  const html = coverHtml + reportHtml;
+
+  // Fill modal preview
+  document.getElementById('pdf-content').innerHTML = html;
+  // Fill print zone
+  document.getElementById('pdf-printzone').innerHTML = html;
+
+  document.getElementById('pdf-modal').classList.add('open');
+}
+
+function closePdf() {
+  document.getElementById('pdf-modal').classList.remove('open');
+}
+
+function printReport() {
+  document.getElementById('pdf-printzone').style.display = 'block';
+  window.print();
+  setTimeout(() => { document.getElementById('pdf-printzone').style.display = 'none'; }, 500);
+}
+
+document.getElementById('pdf-modal').addEventListener('click', function(e) {
+  if (e.target === this) closePdf();
+});
+
+// Build all options
+Object.keys(CRITERIA).forEach(buildOptions);
+buildBonusBio();
+buildBonusRes();
+updateDashboard();
+initSharedSpace();
+</script>
+</body>
+</html>
